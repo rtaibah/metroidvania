@@ -1,0 +1,111 @@
+extends KinematicBody2D
+
+const DustEffect = preload("res://Effects/DustEffect.tscn")
+
+export (int) var ACCELERATION = 512
+export (int) var MAX_SPEED = 64
+export (float) var FRICTION = .25
+export (int) var GRAVITY = 200
+export (int) var JUMP_FORCE = 128
+export (int) var MAX_SLOPE_ANGLE = 46
+
+var motion = Vector2.ZERO
+var snap_vector = Vector2.ZERO
+var just_jumped = false
+
+onready var sprite = $Sprite
+onready var spriteAnimator = $SpriteAnimator
+onready var coyoteJumpTimer = $CoyoteJumpTimer
+
+func _physics_process(delta):
+	just_jumped = false
+	var input_vector = get_input_vector()
+	apply_horizontal_force(input_vector, delta)
+	apply_friction(input_vector)
+	update_vector()
+	jump_check()
+	apply_gravity(delta)
+	update_animations(input_vector)
+	move()
+
+func create_dust_effect():
+	var dust_position = global_position
+	dust_position.x += rand_range(-4,4)
+	var dustEffect = DustEffect.instance()
+	get_tree().current_scene.add_child(dustEffect)
+	dustEffect.global_position = global_position
+	
+func get_input_vector(): 
+	var input_vector = Vector2.ZERO
+	input_vector.x = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
+	return input_vector
+
+
+func apply_horizontal_force(input_vector, delta):
+	if input_vector.x != 0:
+		motion.x += input_vector.x * ACCELERATION * delta
+		motion.x = clamp(motion.x, -MAX_SPEED, MAX_SPEED)
+
+func apply_friction(input_vector):
+	if input_vector.x == 0 && is_on_floor():
+		motion.x = lerp(input_vector.x, 0 , FRICTION)
+
+# Function to improve slope handling and jumping. Check if on floor;
+# if true, snap vector points DOWN to allow jumping		
+func update_vector():
+	if is_on_floor():
+		snap_vector = Vector2.DOWN
+		
+func jump_check():
+	if is_on_floor() or coyoteJumpTimer.time_left > 0:
+		if Input.is_action_just_pressed("ui_up"):
+			motion.y = -JUMP_FORCE
+			just_jumped = true
+			snap_vector = Vector2.ZERO
+
+	else:
+		if Input.is_action_just_released("ui_up") and motion.y < -JUMP_FORCE/2:
+			 motion.y = -JUMP_FORCE/2
+			
+			
+func apply_gravity(delta):
+	if not is_on_floor():
+		motion.y += GRAVITY *delta
+		motion.y = min(motion.y, JUMP_FORCE)
+		
+
+func update_animations(input_vector):
+	if input_vector.x != 0:
+		# If you are using an analog controller, then potentially the vector could be between 0-1
+		sprite.scale.x = sign(input_vector.x)
+		spriteAnimator.play("Run")
+	else:
+		spriteAnimator.play("Idle")
+		
+	if not is_on_floor():
+		spriteAnimator.play("Jump")
+		
+
+func move():
+	# All here except for the motion line are hacks to fix a 2 problems
+	# 1- where player jumps off ledge automatically. Look at y value in remote
+	#    to get an idea of the issue.
+	# 2- If player jumps and lands on a slope, player stops and stutters before moving on.
+	var was_in_air = not is_on_floor()
+	var was_on_floor = is_on_floor()
+	var last_motion = motion
+	var last_position = position
+	motion = move_and_slide_with_snap(motion, snap_vector*4, Vector2.UP, true, 4, deg2rad(MAX_SLOPE_ANGLE))
+	# Landing (issue 2)
+	if was_in_air and is_on_floor():
+		motion.x = last_motion.x
+		create_dust_effect()
+		
+	# Just left ground (issue 1)
+	if was_on_floor and not is_on_floor() and  not just_jumped:
+		motion.y = 0
+		position.y = last_position.y
+		coyoteJumpTimer.start()
+		
+
+		 
