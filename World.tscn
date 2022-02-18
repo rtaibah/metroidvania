@@ -1,8 +1,42 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://World/TileMap.tscn" type="PackedScene" id=1]
 [ext_resource path="res://Player/Player.tscn" type="PackedScene" id=2]
 [ext_resource path="res://World.gd" type="Script" id=3]
+[ext_resource path="res://World/MovingPlatforms.tscn" type="PackedScene" id=4]
+[ext_resource path="res://World/UpDownPlatform.tres" type="Curve2D" id=5]
+
+[sub_resource type="Animation" id=1]
+resource_name = "Loop"
+length = 4.0
+loop = true
+tracks/0/type = "value"
+tracks/0/path = NodePath("Path2D/PathFollow2D:unit_offset")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 2 ),
+"transitions": PoolRealArray( -2, -2 ),
+"update": 0,
+"values": [ 0.0, 1.0 ]
+}
+
+[sub_resource type="Animation" id=2]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/path = NodePath("Path2D/PathFollow2D:unit_offset")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"update": 0,
+"values": [ 1.0 ]
+}
 
 [node name="World" type="Node"]
 script = ExtResource( 3 )
@@ -21,4 +55,25 @@ position = Vector2( 16, 144 )
 [node name="CameraFollow" parent="Player" index="3"]
 remote_path = NodePath("../../Camera")
 
+[node name="MovingPlatforms" parent="." instance=ExtResource( 4 )]
+position = Vector2( -40, 137 )
+
+[node name="MovingPlatforms2" parent="." instance=ExtResource( 4 )]
+position = Vector2( -79, 133 )
+
+[node name="KinematicBody2D" parent="MovingPlatforms2" index="0"]
+position = Vector2( 0, -40 )
+
+[node name="Path2D" parent="MovingPlatforms2" index="1"]
+curve = ExtResource( 5 )
+
+[node name="PathFollow2D" parent="MovingPlatforms2/Path2D" index="0"]
+position = Vector2( 0, -40 )
+offset = 40.0094
+
+[node name="AnimationPlayer" parent="MovingPlatforms2" index="2"]
+anims/Loop = SubResource( 1 )
+anims/RESET = SubResource( 2 )
+
 [editable path="Player"]
+[editable path="MovingPlatforms2"]
