@@ -4,6 +4,8 @@ const DustEffect = preload("res://Effects/DustEffect.tscn")
 const PlayerBullet = preload("res://Player/PlayerBullet.tscn")
 const JumpEffect = preload("res://Effects/JumpEffect.tscn")
 
+var PlayerStats = ResourceLoader.PlayerStats
+
 export (int) var ACCELERATION = 512
 export (int) var MAX_SPEED = 64
 export (float) var FRICTION = .25
@@ -25,8 +27,15 @@ onready var muzzle = $Sprite/PlayerGun/Sprite/Muzzle
 onready var fireBulletTimer = $FireBulletTimer
 onready var BlinkAnimator = $BlinkAnimator
 
+
+func _ready():
+	PlayerStats.connect("player_died", self, "_on_died")
+	
+
+
 func is_invincible(value):
 	invincible = value
+
 
 func _physics_process(delta):
 	just_jumped = false
@@ -129,9 +138,14 @@ func move():
 		motion.y = 0
 		position.y = last_position.y
 		coyoteJumpTimer.start()
-		
-		
-		
+
+
+# warning-ignore:unused_argument
 func _on_Hurtbox_hit(damage):
 	if not invincible:
+		PlayerStats.health -= damage
 		BlinkAnimator.play("Blink")
+
+
+func _on_died():
+	queue_free()
